@@ -1,0 +1,36 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+crash.log
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor, OS and NAS noise
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/
+@eaDir/
+
+# Every dotfile, then the specific ones this project ships.
+#
+# The wildcard is deliberate. It keeps local tool and agent configuration out of
+# a public repository without this file having to name each tool, and new tools
+# are covered the day they appear rather than the day someone remembers to add
+# them. The cost is that it is silent: a dotfile you intend to commit is ignored
+# with no warning, and `git add` on it fails with "ignored by one of your
+# .gitignore files".
+#
+# If you add a dotfile that must ship, negate it here. Check with:
+#     git check-ignore -v <path>
+.*
+!.gitignore
+!.github/
+!.terraform.lock.hcl
+!.env.example
