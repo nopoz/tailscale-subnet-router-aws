@@ -1,5 +1,9 @@
 # Tailscale subnet router on AWS, with Terraform
 
+[![checks](https://github.com/nopoz/tailscale-subnet-router-aws/actions/workflows/checks.yml/badge.svg)](https://github.com/nopoz/tailscale-subnet-router-aws/actions/workflows/checks.yml)
+[![license](https://img.shields.io/github/license/nopoz/tailscale-subnet-router-aws)](LICENSE)
+[![terraform](https://img.shields.io/badge/terraform-%3E%3D1.6.6-7B42BC)](versions.tf)
+
 Deploys a Tailscale subnet router and a private, SSH-enabled node into a new AWS
 VPC. The private node has no public IP address, no SSH key, and no inbound
 security group rule. The only way to reach it is over the tailnet.

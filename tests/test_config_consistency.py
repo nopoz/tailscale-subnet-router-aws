@@ -4,6 +4,9 @@ Terraform resource, so a CIDR changed in one place and not the other produces a
 route that is advertised and never approved: a healthy-looking apply, then
 verify.py sitting through its full five minute deadline before reporting it.
 These tests turn that into a failure that takes a fifth of a second.
+
+The same reasoning covers the version constraint advertised in the README, which
+is the one duplicated value a reader sees before anything else.
 """
 
 import json
@@ -11,6 +14,7 @@ import os
 import re
 import sys
 import unittest
+import urllib.parse
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 sys.path.insert(0, ROOT)
@@ -140,6 +144,32 @@ class TagConsistencyTests(unittest.TestCase):
         destinations = [d for rule in self.policy["ssh"] for d in rule["dst"]]
         for tag in self.created:
             self.assertIn(tag, destinations)
+
+
+class ReadmeBadgeTests(unittest.TestCase):
+    """The version badge states a constraint that also lives in versions.tf. A
+    badge drifts more quietly than most duplication, because nobody renders the
+    README while editing Terraform and the stale value still looks authoritative
+    to everyone arriving at the repository."""
+
+    def test_terraform_badge_matches_required_version(self):
+        with open(os.path.join(ROOT, "README.md")) as handle:
+            readme = handle.read()
+        badge = re.search(r"img\.shields\.io/badge/terraform-([^-\s)]+)-", readme)
+        self.assertIsNotNone(badge, "the Terraform version badge is missing")
+        claimed = urllib.parse.unquote(badge.group(1))
+
+        with open(os.path.join(ROOT, "versions.tf")) as handle:
+            required = re.search(
+                r'required_version\s*=\s*"([^"]+)"', handle.read()
+            ).group(1)
+
+        self.assertEqual(
+            claimed.replace(" ", ""),
+            required.replace(" ", ""),
+            f"the README badge advertises {claimed} but versions.tf requires "
+            f"{required}",
+        )
 
 
 if __name__ == "__main__":
