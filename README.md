@@ -69,8 +69,11 @@ Requirements:
 - Terraform 1.6.6 or newer. Earlier 1.6 patches ship a release signing key that
   has since expired and cannot install providers at all, failing on
   `openpgp: key expired`
-- AWS credentials that can create a VPC and EC2 instances (`AmazonEC2FullAccess`
-  is sufficient and appropriately scoped)
+- AWS credentials that can create a VPC and EC2 instances. `AmazonEC2FullAccess`
+  is sufficient, since VPCs, subnets, gateways and elastic IPs are all `ec2:*`
+  actions, but it is broader than this needs: it also grants full
+  `elasticloadbalancing`, `cloudwatch` and `autoscaling`, none of which are used
+  here
 - Python 3 for `verify.py`, standard library only
 - A POSIX shell; on Windows, use WSL
 - Tailscale on your own machine, joined to the same tailnet, to reach the nodes by
@@ -277,12 +280,14 @@ configuration that owned the policy would have to ship a complete one, which mea
 shipping its author's rules and replacing whatever the operator already had. There
 is no way to add four blocks and remove them again on destroy.
 
-The API does offer a guard, `If-Match: ts-default`, which performs the write only if
-the policy is still the untouched default Tailscale creates for a new tailnet. The
-provider exposes no way to send it, and its own `Overwrite Protected` error is
-bypassed rather than satisfied by importing. So rather than disable a protection to
-buy convenience, the boundary moved: this configuration owns the auth keys, which it
-creates and destroys cleanly, and you own your policy file.
+The API does offer a guard. `GET` on the policy returns an `ETag`, and a `POST`
+carrying it as `If-Match` is refused with `412 precondition failed` if the policy
+changed in the meantime, so a write can be made conditional on the state you read.
+The provider exposes no way to send that header. Its own protection is
+`overwrite_existing_content`, which is a switch you turn off rather than a
+precondition you satisfy. So rather than disable a protection to buy convenience,
+the boundary moved: this configuration owns the auth keys, which it creates and
+destroys cleanly, and you own your policy file.
 
 The cost is one manual merge during setup. The benefit is that running this cannot
 damage your access control, and no rules from anyone else's tailnet ship with it.
