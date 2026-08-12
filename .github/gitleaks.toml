@@ -3,9 +3,13 @@
 # Kept here rather than at the repository root because .gitignore excludes every
 # dotfile by wildcard, and .github/ already carries a negation.
 #
-# The default rules do most of the work and overlap with GitHub's own secret
-# scanning, which is fine: that runs after a push lands, and this runs before a
-# pull request merges. The rule below is the part neither of them covers.
+# GitHub's own secret scanning is enabled here and covers provider tokens, an AWS
+# key or a Tailscale key, better than this can: it also tells the provider to
+# revoke them. What it does not cover on a repository like this one is the
+# generic tier, private keys and connection strings and unbranded API keys.
+# Scanning for those is a paid feature limited to organization-owned
+# repositories, so on a personal repository the default rules below are the only
+# thing looking for them, not a duplicate of something already running.
 
 [extend]
 useDefault = true
