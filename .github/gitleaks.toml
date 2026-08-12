@@ -1,0 +1,30 @@
+# Gitleaks configuration.
+#
+# Kept here rather than at the repository root because .gitignore excludes every
+# dotfile by wildcard, and .github/ already carries a negation.
+#
+# The default rules do most of the work and overlap with GitHub's own secret
+# scanning, which is fine: that runs after a push lands, and this runs before a
+# pull request merges. The rule below is the part neither of them covers.
+
+[extend]
+useDefault = true
+
+# This stack's tailnet name is the operator's email address. It is configuration
+# rather than a credential, so no scanner recognises it on sight and GitHub will
+# never flag it, yet committing it is the one disclosure this repository actually
+# risks. Hence a blanket rule: no email addresses in tracked files at all. It is
+# broader than the real target on purpose, because encoding the address here to
+# match it exactly would publish the very thing being protected.
+[[rules]]
+id = "email-address"
+description = "Email address in a tracked file. The tailnet name is one; keep it in .env."
+regex = '''[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'''
+tags = ["privacy", "tailnet"]
+
+  [rules.allowlist]
+  regexTarget = "match"
+  regexes = [
+    # Reserved for documentation by RFC 2606, so it can never be anyone's.
+    '''@example\.(com|org|net)''',
+  ]

@@ -58,3 +58,25 @@ jobs:
       # checks and the consistency of the CIDR and tag names across the
       # configuration, the policy document and verify.py itself.
       - run: python -m unittest discover -s tests -v
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # gitleaks scans commits, not just the checked out tree, and a secret
+          # removed in a later commit is still published by the earlier one. The
+          # default shallow clone would hide exactly that.
+          fetch-depth: 0
+      # Pinned like everything else here, and run as the released binary rather
+      # than through the action, so the version in use is the one written down.
+      - name: gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+        run: |
+          curl -fsSL --retry 3 \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar xz gitleaks
+          # --redact so that a finding does not print the secret it found into a
+          # public build log, which would publish it a second time.
+          ./gitleaks git --no-banner --redact --config .github/gitleaks.toml .
