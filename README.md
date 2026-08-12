@@ -1,8 +1,8 @@
 # Tailscale subnet router on AWS, with Terraform
 
-Deploys a Tailscale subnet router and a private, SSH-enabled node into a new VPC.
-The private node has no public IP address, no SSH key, and no inbound security
-group rule. The only way to reach it is over the tailnet.
+Deploys a Tailscale subnet router and a private, SSH-enabled node into a new AWS
+VPC. The private node has no public IP address, no SSH key, and no inbound
+security group rule. The only way to reach it is over the tailnet.
 
 Route approval is code too. `autoApprovers` in the tailnet policy approves the VPC
 CIDR for anything carrying the router's tag, so the route is live the moment the
@@ -23,7 +23,7 @@ router registers and nobody clicks anything.
 flowchart LR
     client["your device<br/>--accept-routes"]
 
-    subgraph vpc["VPC 10.100.0.0/16"]
+    subgraph vpc["AWS VPC 10.100.0.0/16"]
         direction TB
         subgraph pub["public subnet 10.100.1.0/24"]
             router["subnet router<br/>10.100.1.10 + elastic IP<br/>advertises 10.100.0.0/16"]
@@ -50,9 +50,9 @@ public address of its own.
 
 ## What it builds
 
-- a VPC with one public and one private subnet
-- a subnet router in the public subnet advertising the whole VPC CIDR, which also
-  acts as the NAT instance for the private subnet
+- an AWS VPC with one public and one private subnet
+- a subnet router EC2 instance in the public subnet advertising the whole VPC
+  CIDR, which also acts as the NAT instance for the private subnet
 - an app node in the private subnet with no public IP and Tailscale SSH enabled
 - two ephemeral, single-use, tagged auth keys, created and destroyed with the stack
 
