@@ -30,7 +30,21 @@ jobs:
       # -backend=false because there is no remote state to reach, and validate
       # only needs the providers from .terraform.lock.hcl. Variables without
       # defaults, including the tailnet name, are not required to validate.
-      - run: terraform init -backend=false
+      #
+      # Retried because the Tailscale provider's checksums come from GitHub
+      # releases rather than the registry CDN, and that request times out often
+      # enough to turn the badge red for no reason. A genuinely broken lock file
+      # or configuration still fails all three attempts.
+      - name: terraform init
+        run: |
+          for attempt in 1 2 3; do
+            if terraform init -backend=false; then
+              exit 0
+            fi
+            echo "::warning::terraform init attempt $attempt failed, retrying"
+            sleep 15
+          done
+          exit 1
       - run: terraform validate
 
   tests:
