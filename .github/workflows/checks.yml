@@ -1,0 +1,46 @@
+name: checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+# Nothing here needs an AWS or Tailscale credential. Everything the workflow runs
+# is runnable locally, and none of it reaches either API, so the repository needs
+# no secrets configured.
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor required_version claims, and whatever is current. Testing
+        # only the current release would let the claimed minimum rot unnoticed,
+        # and fmt rules have changed between Terraform versions before now.
+        terraform: ["1.6.6", "latest"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ matrix.terraform }}
+          terraform_wrapper: false
+      - run: terraform fmt -check -recursive
+      # -backend=false because there is no remote state to reach, and validate
+      # only needs the providers from .terraform.lock.hcl. Variables without
+      # defaults, including the tailnet name, are not required to validate.
+      - run: terraform init -backend=false
+      - run: terraform validate
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+      # Standard library only, so there is nothing to install. Covers verify.py's
+      # checks and the consistency of the CIDR and tag names across the
+      # configuration, the policy document and verify.py itself.
+      - run: python -m unittest discover -s tests -v
