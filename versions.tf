@@ -1,5 +1,9 @@
 terraform {
-  required_version = ">= 1.6.0"
+  # 1.6.6 rather than 1.6.0. Earlier 1.6 patches carry a HashiCorp release
+  # signing key that has since expired, so provider installation fails with
+  # "openpgp: key expired" before any of this configuration is read. Nothing
+  # here needs a feature newer than 1.6; the floor is about the toolchain.
+  required_version = ">= 1.6.6"
 
   required_providers {
     aws = {

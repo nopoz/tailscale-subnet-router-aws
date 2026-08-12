@@ -63,7 +63,9 @@ notes for why.
 
 Requirements:
 
-- Terraform 1.6 or newer
+- Terraform 1.6.6 or newer. Earlier 1.6 patches ship a release signing key that
+  has since expired and cannot install providers at all, failing on
+  `openpgp: key expired`
 - AWS credentials that can create a VPC and EC2 instances (`AmazonEC2FullAccess`
   is sufficient and appropriately scoped)
 - Python 3 for `verify.py`, standard library only
