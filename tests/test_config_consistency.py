@@ -192,6 +192,32 @@ class ArchitectureDiagramTests(unittest.TestCase):
         self.assertNotRegex(self.diagram(), r"\n\s*direction\s")
 
 
+class ProviderLockTests(unittest.TestCase):
+    """The lock file is committed on purpose, so that everyone resolves the same
+    provider builds. It records one h1 hash per platform it was generated for,
+    and a plain terraform init only ever adds the platform it happens to run on.
+
+    A lock covering only Linux still works on a Mac, but terraform init silently
+    rewrites this tracked file to add the missing hash, so the first thing a new
+    reader sees is a dirty working tree they did not cause. Refresh it with
+    terraform providers lock -platform=... rather than with init."""
+
+    PLATFORMS = 4  # darwin_arm64, darwin_amd64, linux_amd64, linux_arm64
+
+    def test_every_provider_is_locked_for_every_supported_platform(self):
+        with open(os.path.join(ROOT, ".terraform.lock.hcl")) as handle:
+            lock = handle.read()
+        providers = re.findall(r'provider "([^"]+)" \{(.*?)\n\}', lock, re.S)
+        self.assertTrue(providers, "the lock file records no providers")
+        for name, body in providers:
+            self.assertGreaterEqual(
+                body.count("h1:"),
+                self.PLATFORMS,
+                f"{name} is locked for fewer than {self.PLATFORMS} platforms, so "
+                "init will rewrite the lock file for anyone on the others",
+            )
+
+
 class ReadmeBadgeTests(unittest.TestCase):
     """The version badge states a constraint that also lives in versions.tf. A
     badge drifts more quietly than most duplication, because nobody renders the

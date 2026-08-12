@@ -303,6 +303,15 @@ described above. Point it at
 `ubuntu/images/hvm-ssd*/ubuntu-noble-24.04-amd64-server-*` to track the latest instead,
 which is the right choice for anything long-lived.
 
+**The provider lock file covers four platforms.** `.terraform.lock.hcl` is
+committed, as it should be, so that everyone resolves the same provider builds.
+It is generated for `darwin_arm64`, `darwin_amd64`, `linux_amd64` and
+`linux_arm64`, because it records one hash per platform and a plain
+`terraform init` only adds the one it is run on. A Linux-only lock still works on
+a Mac, but `init` quietly rewrites a tracked file to add the missing hash. When
+you change a provider version, refresh it with `terraform providers lock
+-platform=...` for each of the four rather than with `init`.
+
 **Auth keys travel in user data.** That is readable by anyone who can call
 `DescribeInstanceAttribute`. The mitigation is that the keys are single-use,
 pre-authorized, and expire in an hour, so they are worthless shortly after boot.
