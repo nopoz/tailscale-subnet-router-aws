@@ -326,9 +326,12 @@ by choosing an unusual range.
 ## Troubleshooting
 
 **Peers are advertising routes but `--accept-routes` is false.** Run
-`tailscale set --accept-routes` on the client. Linux and Windows do not accept
-advertised routes by default. Tailscale's health check reports this, and it is the
-single most common reason a correctly configured subnet router appears not to work.
+`tailscale set --accept-routes` on the client, and check the current state with
+`tailscale debug prefs | grep RouteAll`. Linux does not accept advertised routes by
+default, and nor do BSD or the open source macOS build; Windows, iOS, Android and
+the App Store and standalone macOS builds do. Tailscale's health check reports this,
+and it is the single most common reason a correctly configured subnet router appears
+not to work.
 
 **`ssh ubuntu@10.100.2.20` returns `Permission denied (publickey)`.** Expected.
 Tailscale SSH only intercepts connections arriving on the tailnet interface. Reaching
