@@ -1,0 +1,24 @@
+#cloud-config
+package_update: true
+packages:
+  - iptables-persistent
+
+write_files:
+  # The filename must end in .conf or systemd ignores the drop-in silently and
+  # the box comes up with forwarding off, which looks exactly like a Tailscale
+  # problem and is not one.
+  - path: /etc/sysctl.d/99-tailscale.conf
+    content: |
+      net.ipv4.ip_forward = 1
+      net.ipv6.conf.all.forwarding = 1
+
+runcmd:
+  - sysctl -p /etc/sysctl.d/99-tailscale.conf
+  # Masquerade private subnet traffic that is leaving the VPC. Traffic staying
+  # inside the VPC is excluded so it is not double-NATed on top of Tailscale's
+  # own subnet route masquerading.
+  - iptables -t nat -A POSTROUTING -s ${private_cidr} ! -d ${vpc_cidr} -j MASQUERADE
+  - netfilter-persistent save
+  - curl -fsSL --retry 3 --retry-connrefused https://tailscale.com/install.sh | sh
+  # See the note in app.yaml: declining tailnet DNS keeps the VPC resolver.
+  - tailscale up --auth-key=${auth_key} --advertise-routes=${vpc_cidr} --hostname=${hostname} --ssh --accept-dns=false

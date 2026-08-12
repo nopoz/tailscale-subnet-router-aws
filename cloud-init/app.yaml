@@ -1,0 +1,29 @@
+#cloud-config
+runcmd:
+  # This node has no internet access until the subnet router finishes booting and
+  # installs its masquerade rule, so it waits rather than failing on the first
+  # attempt. Sixty attempts at ten seconds is the ten minute ceiling.
+  - |
+    reached=no
+    for i in $(seq 1 60); do
+      # Probe exactly what the next command fetches. Probing a different host
+      # can succeed while the one that matters is still unreachable.
+      if curl -fsS --max-time 5 -o /dev/null https://tailscale.com/install.sh; then
+        echo "egress is up after attempt $i"
+        reached=yes
+        break
+      fi
+      sleep 10
+    done
+    if [ "$reached" != yes ]; then
+      echo "egress never came up after 10 minutes; is the subnet router healthy?" >&2
+      exit 1
+    fi
+  - curl -fsSL --retry 3 --retry-connrefused https://tailscale.com/install.sh | sh
+  # --accept-dns=false is load bearing. A tailnet with a global nameserver
+  # configured pushes it to every node, and a resolver that lives on someone's
+  # home LAN is unreachable from a VPC. The node then has working egress and no
+  # working name resolution, which presents as "the internet is down" while
+  # tailscaled stays happily connected on its hardcoded DERP addresses.
+  # Declining tailnet DNS keeps the VPC resolver these nodes were born with.
+  - tailscale up --auth-key=${auth_key} --hostname=${hostname} --ssh --accept-dns=false
