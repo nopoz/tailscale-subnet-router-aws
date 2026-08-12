@@ -146,11 +146,71 @@ class TagConsistencyTests(unittest.TestCase):
             self.assertIn(tag, destinations)
 
 
+class ArchitectureDiagramTests(unittest.TestCase):
+    """Mermaid renderers disagree about the diagram in three ways that are all
+    invisible until someone looks at the rendered page, so each one is pinned
+    here. Every rule below was established by rendering candidates through
+    GitHub itself and comparing them against a local previewer.
+
+    Line breaks are written as \\n, which is what GitHub understands, because
+    GitHub is where this file is read. Previewers that keep HTML labels enabled
+    print the two characters instead; configuring htmlLabels off locally makes
+    them agree. Relying on mermaid's own word wrapping instead was tried and
+    rejected: it breaks wherever the width happens to run out, which differs per
+    renderer and split --accept-routes across two lines."""
+
+    def diagram(self):
+        with open(os.path.join(ROOT, "README.md")) as handle:
+            block = re.search(r"```mermaid\n(.*?)```", handle.read(), re.S)
+        self.assertIsNotNone(block, "the architecture diagram is missing")
+        return block.group(1)
+
+    def test_no_html_line_breaks(self):
+        # GitHub renders mermaid with HTML labels disabled, so <br/> is neither a
+        # break nor whitespace: the words either side are joined outright, giving
+        # "subnet router10.100.1.10". Local previewers handle it fine, which is
+        # why it survived review.
+        self.assertNotIn("<br", self.diagram())
+
+    def test_labels_break_where_they_are_told_to(self):
+        # Every place the diagram means a new line. Pinned individually because
+        # a single missing break is easy to miss in a rendered picture, and an
+        # init directive re-enabling htmlLabels does not help: GitHub ignores it.
+        diagram = self.diagram()
+        for label in (
+            "your device\\n--accept-routes",
+            "subnet router 10.100.1.10\\nelastic IP\\nadvertises 10.100.0.0/16",
+            "app node 10.100.2.20\\nno public IP, no SSH key",
+            "subnet route in\\ndefault route out",
+        ):
+            self.assertIn(label, diagram)
+
+    def test_no_direction_statement_inside_the_subgraphs(self):
+        # With an explicit direction, GitHub clips edges that cross a cluster
+        # boundary to the boundary itself, so every arrow appears to connect to
+        # the VPC box rather than to the host inside it.
+        self.assertNotRegex(self.diagram(), r"\n\s*direction\s")
+
+
 class ReadmeBadgeTests(unittest.TestCase):
     """The version badge states a constraint that also lives in versions.tf. A
     badge drifts more quietly than most duplication, because nobody renders the
     README while editing Terraform and the stale value still looks authoritative
     to everyone arriving at the repository."""
+
+    def test_ci_badge_points_at_a_workflow_that_exists(self):
+        # The badge names the workflow file in its URL. Renaming the file leaves
+        # a badge that 404s to an image GitHub renders as nothing in particular,
+        # which is easy to miss because the page still looks fine.
+        with open(os.path.join(ROOT, "README.md")) as handle:
+            readme = handle.read()
+        badge = re.search(r"actions/workflows/([^/\s]+\.ya?ml)/badge\.svg", readme)
+        self.assertIsNotNone(badge, "the CI badge is missing from README.md")
+        workflow = os.path.join(ROOT, ".github", "workflows", badge.group(1))
+        self.assertTrue(
+            os.path.isfile(workflow),
+            f"the badge points at {badge.group(1)}, which does not exist",
+        )
 
     def test_terraform_badge_matches_required_version(self):
         with open(os.path.join(ROOT, "README.md")) as handle:

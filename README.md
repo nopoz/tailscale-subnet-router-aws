@@ -1,6 +1,6 @@
 # Tailscale subnet router on AWS, with Terraform
 
-[![checks](https://github.com/nopoz/tailscale-subnet-router-aws/actions/workflows/checks.yml/badge.svg)](https://github.com/nopoz/tailscale-subnet-router-aws/actions/workflows/checks.yml)
+[![CI](https://github.com/nopoz/tailscale-subnet-router-aws/actions/workflows/ci.yml/badge.svg)](https://github.com/nopoz/tailscale-subnet-router-aws/actions/workflows/ci.yml)
 [![license](https://img.shields.io/github/license/nopoz/tailscale-subnet-router-aws)](LICENSE)
 [![terraform](https://img.shields.io/badge/terraform-%3E%3D1.6.6-7B42BC)](versions.tf)
 
@@ -25,22 +25,21 @@ router registers and nobody clicks anything.
 
 ```mermaid
 flowchart LR
-    client["your device<br/>--accept-routes"]
+    client["your device\n--accept-routes"]
 
     subgraph vpc["AWS VPC 10.100.0.0/16"]
-        direction TB
         subgraph pub["public subnet 10.100.1.0/24"]
-            router["subnet router<br/>10.100.1.10 + elastic IP<br/>advertises 10.100.0.0/16"]
+            router["subnet router 10.100.1.10\nelastic IP\nadvertises 10.100.0.0/16"]
         end
         subgraph priv["private subnet 10.100.2.0/24"]
-            app["app node<br/>10.100.2.20<br/>no public IP, no SSH key"]
+            app["app node 10.100.2.20\nno public IP, no SSH key"]
         end
     end
 
     internet(["internet"])
 
     client -. "over the tailnet" .-> router
-    router <-->|"subnet route in<br/>default route out"| app
+    router <-->|"subnet route in\ndefault route out"| app
     router -->|"SNAT to the elastic IP"| internet
 ```
 
