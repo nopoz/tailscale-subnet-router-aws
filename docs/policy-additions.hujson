@@ -1,0 +1,73 @@
+// Tailnet policy additions required by this stack.
+//
+// Merge these four blocks into your own tailnet policy file before running
+// terraform. Merge them *into* the corresponding top-level keys if you already
+// have them; HuJSON rejects duplicate keys, so a second "grants" key is an error
+// rather than an append.
+//
+// This is documentation, not an input. Terraform does not read this file. The
+// policy file is a whole-file resource in both the provider and the API, so a
+// repository that managed it would have to ship a complete policy, which means
+// shipping its author's rules and replacing yours. Your policy stays yours.
+//
+// Validate your merged result before applying it:
+//
+//   curl -sS -X POST -H "Authorization: Bearer $TS_API_TOKEN" \
+//        -H "Content-Type: application/hujson" \
+//        --data-binary @policy.hujson \
+//        https://api.tailscale.com/api/v2/tailnet/-/acl/validate
+//
+// An empty object means it is valid.
+{
+	// Each tag lists itself as an owner alongside autogroup:admin. This is load
+	// bearing, not a typo. A principal can only apply a tag it owns, and the
+	// OAuth client terraform authenticates with is not a human, so it is in no
+	// autogroup. With autogroup:admin as the only owner, every human admin can
+	// apply the tag and the automation cannot, which surfaces at apply time as
+	// "requested tags are invalid or not permitted" even though the client
+	// visibly carries the tag.
+	"tagOwners": {
+		"tag:aws-subnet-router": ["autogroup:admin", "tag:aws-subnet-router"],
+		"tag:aws-app":           ["autogroup:admin", "tag:aws-app"],
+	},
+
+	// Approves the VPC route at device registration time. This is the whole point
+	// of the design: no human clicks approve, and terraform never has to
+	// reference a device that does not exist at plan time. Without this the route
+	// is advertised and never approved, which is what verify.py reports.
+	//
+	// This CIDR must match var.vpc_cidr in variables.tf.
+	"autoApprovers": {
+		"routes": {
+			"10.100.0.0/16": ["tag:aws-subnet-router"],
+		},
+	},
+
+	"grants": [
+		{
+			// Reach anything inside the VPC, including the private subnet that has
+			// no route of its own to the internet gateway.
+			"src": ["autogroup:member"],
+			"dst": ["10.100.0.0/16"],
+			"ip":  ["*"],
+		},
+		{
+			// Reach the two AWS nodes by their own tailnet addresses.
+			"src": ["autogroup:member"],
+			"dst": ["tag:aws-subnet-router", "tag:aws-app"],
+			"ip":  ["*"],
+		},
+	],
+
+	"ssh": [
+		{
+			// Tagged devices have no user owner, so a rule targeting autogroup:self
+			// does not cover them. accept rather than check, so a long-running
+			// session is not interrupted by a re-authentication prompt.
+			"action": "accept",
+			"src":    ["autogroup:member"],
+			"dst":    ["tag:aws-subnet-router", "tag:aws-app"],
+			"users":  ["autogroup:nonroot", "root"],
+		},
+	],
+}
