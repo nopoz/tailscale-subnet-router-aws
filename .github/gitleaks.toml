@@ -20,6 +20,36 @@ useDefault = true
 # risks. Hence a blanket rule: no email addresses in tracked files at all. It is
 # broader than the real target on purpose, because encoding the address here to
 # match it exactly would publish the very thing being protected.
+# The credentials this stack actually handles, which the default rules do not
+# recognise by shape. They catch a Tailscale key or an AWS key today only when it
+# sits next to a variable named something like `secret` or `api_key`, through the
+# generic assignment rule, so renaming the variable loses the catch. Both formats
+# below are distinctive enough to match on the value alone.
+#
+# The case that matters most: terraform.tfstate holds the auth key in plaintext.
+# It is excluded by the *.tfstate pattern in .gitignore, but a `git add -f` or a
+# rewritten ignore file would put it in a commit, and this is what would notice.
+[[rules]]
+id = "tailscale-key"
+description = "Tailscale auth key, OAuth client secret or API access token"
+regex = '''tskey-(?:auth|client|api)-[A-Za-z0-9]{8,}-[A-Za-z0-9+/_-]{20,}'''
+keywords = ["tskey-"]
+tags = ["tailscale", "credential"]
+
+[[rules]]
+id = "aws-access-key-id"
+description = "AWS access key ID. Not secret alone, but nothing here should carry one."
+regex = '''\b(?:AKIA|ASIA|ABIA|ACCA)[A-Z0-9]{16}\b'''
+keywords = ["AKIA", "ASIA", "ABIA", "ACCA"]
+tags = ["aws", "credential"]
+
+  [rules.allowlist]
+  regexTarget = "match"
+  regexes = [
+    # AWS's own documentation key, which appears in countless legitimate docs.
+    '''EXAMPLE''',
+  ]
+
 [[rules]]
 id = "email-address"
 description = "Email address in a tracked file. The tailnet name is one; keep it in .env."
